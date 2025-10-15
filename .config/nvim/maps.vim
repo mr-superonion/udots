@@ -46,7 +46,6 @@ nnoremap H :tabprevious<CR>
 " from outside of Vim. Press the <F2> key to toggle paste mode on/off.
 nnoremap <F2> :set invpaste paste?<CR>
 imap <F2> <C-O>:set invpaste paste?<CR>
-set pastetoggle=<F2>
 set clipboard=unnamedplus
 
 " This is for copy paster between servers

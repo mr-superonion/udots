@@ -46,7 +46,6 @@ hi CursorLine gui=underline guifg=254 guibg=254 cterm=underline ctermbg=242 cter
 
 " Syntax
 set showmatch
-set guioptions=T
 set hlsearch
 
 " line
