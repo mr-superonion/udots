@@ -44,11 +44,10 @@ exec_always {
     systemctl --user import-environment WAYLAND_DISPLAY XDG_SESSION_TYPE XDG_CURRENT_DESKTOP
     systemctl --user restart xdg-desktop-portal xdg-desktop-portal-wlr
 }
-output eDP-2 pos 0 0
-output eDP-2 scale 2.5
+output eDP-1 pos 0 0
+output eDP-1 scale 2.5
 output DP-1 scale 1.5
 output HDMI-A-1 scale 1.5
-
 
 exec_always {
     # Input method env for Fcitx5
