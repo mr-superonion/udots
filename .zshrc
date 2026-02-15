@@ -1,7 +1,6 @@
 # .zshrc
 
 export LC_ALL=en_US.UTF-8
-export LC_ALL=en_US.UTF-8
 
 # Source global definitions
 if [ -f /etc/zshrc ]; then
@@ -26,4 +25,3 @@ done
 unset config_files
 
 export LMOD_SYSTEM_DEFAULT_MODULES="python:cray-libsci:craype-network-arises:cray-mpich:craype"
-
