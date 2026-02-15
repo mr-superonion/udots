@@ -1,0 +1,26 @@
+#!/usr/bin/env sh
+# choose the server to login
+
+# Make sure we have rofi
+command -v rofi >/dev/null 2>&1 || exit
+
+VPN_INFO="$HOME/.local/xshare/vpn.info"
+
+# Which server to choose
+server=$(grep -v "#" "$VPN_INFO" | awk '{print $1}' | rofi -dmenu -i -p 'choose the vpn server' -lines 20)
+[ "$server" != "" ] || exit
+
+chosen=$(grep "^$server[[:space:]]" "$VPN_INFO")
+server=$(echo "$chosen"  | awk '{print $1}')
+usrname=$(echo "$chosen" | awk '{print $2}')
+passwd=$(echo "$chosen"  | awk '{print $3}')
+
+if [ "$server" = "IPMU" ]; then
+    echo "$passwd" | sudo openconnect \
+        --protocol=anyconnect \
+        --authgroup=Remote_User \
+        -u "$usrname" \
+        vpngw.ipmu.jp
+elif [ "$server" = "PAU" ]; then
+    startct -m console remote.princeton.edu
+fi

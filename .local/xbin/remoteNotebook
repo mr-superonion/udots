@@ -1,51 +1,49 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
+# choose the server to login
 
-# Prompt the user for server details
-read -p "Enter server (user@server_name): " s
-read -p "Enter port (default is 9555): " p
+# Initialization
 
-# Set default port if none is provided
-if [[ -z "$p" ]]; then
-    p="9555"
+# Ensure menu launcher is available
+command -v rofi >/dev/null 2>&1 || exit
+
+# Which server to choose
+chosen=$(grep -v "#" $HOME/.local/xshare/server.info | awk '{print $1}'| rofi -dmenu -i -p 'choose the ssh server' -lines 20)
+[ "$chosen" != "" ] || exit
+
+info=$(grep "$chosen" $HOME/.local/xshare/server.info)
+s=$(echo "$info" | awk '{print $2}')
+p=$(echo "$info" | awk '{print $3}')
+
+[ "$p" != "" ] || exit
+
+# Connet to remote Jupyter server
+# input is the $(which jupyter) on server
+
+port1="$p"
+
+SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
+export SSH_AUTH_SOCK="$SOCK"
+
+# Read remote jupyter info (now ssh sees SSH_AUTH_SOCK)
+info_remote=$(ssh "$s" 'cat "$HOME/.cache/jupyterlab.info"')
+client=$(awk '{print $1}' <<< "$info_remote")
+port3=$(awk '{print $2}' <<< "$info_remote")
+
+port1="$p"
+
+# kill existing local listeners on port1
+pids=$(lsof -i :"$port1" 2>/dev/null | awk '/LISTEN/ {print $2}' | sort -u)
+if [ -n "$pids" ]; then
+  kill $pids
 fi
 
-# Validate server details
-if [[ -z "$s" ]]; then
-    echo "Please provide the server details."
-    exit 1
-fi
+# Set up tunnel (also uses SSH_AUTH_SOCK)
+cmd=(ssh -f -N -L "${port1}:${client}:${port3}" "$s")
+echo "${cmd[@]}"
+"${cmd[@]}"
 
-# Terminate existing identical connections
-pids=$(lsof -i :"$p" | awk '/IPv4/ && /LISTEN/ {print $2}')
-if [[ -n "$pids" ]]; then
-    kill $pids || {
-        echo "Failed to terminate existing connections on port $p."
-        exit 1
-    }
-fi
-
-# Fetch client and port information from the remote server
-read client port3 <<< $(ssh "$s" "awk '{print \$1, \$2}' \$HOME/.cache/jupyterlab.info")
-if [[ -z "$client" || -z "$port3" ]]; then
-    echo "Failed to retrieve client or port information from remote server."
-    exit 1
-fi
-
-# Establish an SSH tunnel
-cmd="ssh -f -N -L $p:$client:$port3 $s"
-echo "$cmd"
-eval "$cmd" || {
-    echo "Failed to establish an SSH tunnel."
-    exit 1
-}
-
-# Print and open the Jupyter URL
-url="http://localhost:$p"
+url="http://localhost:${port1}"
 echo "URL that will open in your browser:"
 echo "$url"
 
-# Launch in firefox (or replace with your browser of choice)
-firefox "$url" || {
-    echo "Failed to launch Firefox. Please open the URL manually."
-    exit 1
-}
+brave "$url"

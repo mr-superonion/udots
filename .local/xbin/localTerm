@@ -1,0 +1,27 @@
+#!/usr/bin/env sh
+#LD_LID
+export LD_LIBRARY_PATH="$homeSys/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$homeSys/lib64:$LD_LIBRARY_PATH"
+
+# Make sure tmux exists
+command -v tmux >/dev/null 2>&1 || exit 0
+
+# Already inside tmux
+[ -n "$TMUX" ] && exit 0
+
+# Get the first idle session name
+session=$(
+    tmux ls -F '#{session_name}|#{?session_attached,attached,not attached}' \
+        2>/dev/null | grep -v publication | grep 'not attached$' | tail -n 1 | cut -d '|' -f1
+)
+
+if [ -z "$session" ]; then
+    nss=$(
+        tmux ls -F '#{session_name}|#{?session_attached,attached,not attached}' \
+            2>/dev/null | sort -n | tail -n 1 | cut -d '|' -f1
+    )
+    nss=$((nss + 1))
+    foot -T "Term$nss" tmux
+else
+    foot -T "Term$session" tmux attach -t "$session"
+fi

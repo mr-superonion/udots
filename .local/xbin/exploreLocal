@@ -1,0 +1,56 @@
+#!/usr/bin/env sh
+
+command -v rofi >/dev/null 2>&1 || exit
+
+cachedir=${XDG_CACHE_HOME:-"$HOME/.cache"}
+if [ -d "$cachedir" ]; then
+	cache=$cachedir/rofi_menu_cache
+	history_file=$cachedir/rofi_file_history
+else			# if no xdg dir, fall back to dotfiles in ~
+	cache=$HOME/.rofi_menu_cache
+	history_file=$HOME/.rofi_file_history
+fi
+
+selected_path="$HOME"/Documents
+max_history_entries=20
+
+choices=(
+    '<open file manager here>'
+    '..'
+    "$(ls "$selected_path")"
+    "$(cat "$history_file")"
+)
+
+open_command='xdg-open'
+
+write_selection_to_history_file() {
+    sed -i "\:${selected_path}:d" "$history_file"
+    printf '%s\n' "$selected_path" >> "$history_file"
+    printf '%s\n' "$(tail -n "$max_history_entries" "$history_file")" > "$history_file"
+}
+
+while : ; do
+    prompt="$(basename $selected_path)"
+    menu_result="$(printf '%s\n' "${choices[@]}" | rofi -dmenu -i -p "$prompt" -lines 10)" || exit 1
+    if [ "$menu_result" = '<open file manager here>' ]; then
+        $open_command "$selected_path"
+        write_selection_to_history_file
+        exit 0
+    fi
+
+    if [[ "$menu_result" == "/"* ]]; then
+        selected_path="${menu_result}"
+    else
+        selected_path="$(realpath "${selected_path}/${menu_result}")"
+    fi
+
+    if [ -f "$selected_path" ]; then
+        $open_command "$selected_path"
+        write_selection_to_history_file
+        exit 0
+    elif [ -d "$selected_path" ]; then
+        choices=( '<open file manager here>' '..' "$(ls "$selected_path")")
+    else
+        selected_path="$(dirname "$selected_path")"
+    fi
+done

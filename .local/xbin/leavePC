@@ -1,0 +1,38 @@
+#!/usr/bin/env sh
+
+#!/usr/bin/env sh
+# Rofi power menu for Sway
+
+set -euo pipefail
+
+command -v rofi >/dev/null 2>&1 || exit 0
+
+choice="$(printf "Lock Screen\nLogout\nShut Down\nReboot" \
+  | rofi -dmenu -i -p 'Choose Option' -lines 4)"
+[ -n "${choice:-}" ] || exit 0
+
+case "$choice" in
+  "Lock Screen")
+    if command -v swaylock >/dev/null 2>&1; then
+      # solid black; tweak options as you like
+      exec swaylock -f -c 000000
+    else
+      # fallback: ask logind to lock (works if a locker is configured)
+      exec loginctl lock-session
+    fi
+    ;;
+  "Logout")
+    # exit the Sway compositor (closes session)
+    exec swaymsg exit
+    ;;
+  "Shut Down")
+    # systemd-based shutdown (polkit will handle auth if needed)
+    exec systemctl poweroff
+    ;;
+  "Reboot")
+    exec systemctl reboot
+    ;;
+  *)
+    exit 0
+    ;;
+esac

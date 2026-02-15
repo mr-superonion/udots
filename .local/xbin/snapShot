@@ -1,0 +1,86 @@
+#!/usr/bin/env sh
+#!/usr/bin/env sh
+# Wayland screenshot helper (grim/slurp) with rofi menu.
+# Saves to ~/Documents/Snapshots and copies PNG to clipboard.
+
+set -euo pipefail
+
+need() { command -v "$1" >/dev/null 2>&1; }
+
+# deps check
+for bin in rofi grim wl-copy; do
+  need "$bin" || { echo "Missing dependency: $bin" >&2; exit 1; }
+done
+# slurp only needed for region mode, but we'll try to use it when available
+SLURP_OK=0; need slurp && SLURP_OK=1
+JQ_OK=0; need jq && JQ_OK=1
+
+mkdir -p "$HOME/Documents/Snapshots"
+ts="$(date +'%Y-%m-%d-%H-%M-%S')"
+out="$HOME/Documents/Snapshots/$ts.png"
+
+choice="$(printf '%s\n%s\n' 'Current Window' 'Rectangle Region' \
+  | rofi -dmenu -i -p 'snapshot?' -lines 2)"
+[ -n "${choice:-}" ] || exit 0
+
+# small helper: save PNG and copy to clipboard
+save_and_copy() {
+  # $1: geometry or '-' for full frame; $2: (optional) output file override
+  geom="$1"
+  file="${2:-$out}"
+  if [ "$geom" = "-" ]; then
+    grim "$file"
+  else
+    grim -g "$geom" "$file"
+  fi
+  wl-copy --type image/png < "$file"
+  notify-send "Screenshot saved" "$file" >/dev/null 2>&1 || true
+}
+
+# get focused window geometry (x,y widthxheight) for Sway/Hyprland
+focused_geom() {
+  if need swaymsg && [ $JQ_OK -eq 1 ]; then
+    swaymsg -t get_tree \
+      | jq -r '.. | objects | select(.focused? == true).rect | "\(.x),\(.y) \(.width)x\(.height)"'
+    return
+  fi
+  if need hyprctl && [ $JQ_OK -eq 1 ]; then
+    hyprctl activewindow -j \
+      | jq -r '"\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"'
+    return
+  fi
+  # unknown compositor: no focused window geometry
+  echo ""
+}
+
+case "$choice" in
+  "Current Window")
+    geom="$(focused_geom || true)"
+    if [ -n "$geom" ]; then
+      sleep 1  # mimic scrot -d 1 delay
+      save_and_copy "$geom"
+    else
+      # fallback to region if we can, otherwise full screen
+      if [ $SLURP_OK -eq 1 ]; then
+        sleep 1
+        save_and_copy "$(slurp)"
+      else
+        sleep 1
+        save_and_copy "-"
+      fi
+    fi
+    ;;
+  "Rectangle Region")
+    if [ $SLURP_OK -eq 1 ]; then
+      sleep 1  # mimic scrot -d 1
+      save_and_copy "$(slurp)"
+    else
+      echo "slurp not installed; cannot select a region. Taking full-screen instead." >&2
+      sleep 1
+      save_and_copy "-"
+    fi
+    ;;
+  *)
+    exit 0
+    ;;
+esac

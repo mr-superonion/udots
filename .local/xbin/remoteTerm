@@ -1,0 +1,23 @@
+#!/usr/bin/env sh
+# choose the server to login
+
+# Require rofi and foot
+command -v rofi >/dev/null 2>&1 || exit
+command -v foot >/dev/null 2>&1 || exit
+
+INFO="$HOME/.local/xshare/server.info"
+
+# Pick a host label (ignore comments/blank lines)
+chosen="$(
+  awk 'NF && $1 !~ /^#/' "$INFO" | awk '{print $1}' \
+  | rofi -dmenu -i -p 'choose the ssh server' -lines 20
+)"
+[ -n "$chosen" ] || exit
+
+# Get its ssh target (2nd column)
+c="$(awk -v k="$chosen" 'NF && $1 !~ /^#/ && $1==k {print $2; exit}' "$INFO")"
+[ -n "$c" ] || exit
+
+SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
+# Launch in foot; set a nice app-id/title and exec ssh
+exec foot --app-id "ssh-$chosen" --title "$chosen" -e env SSH_AUTH_SOCK="$SOCK" ssh "$c"

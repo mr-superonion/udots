@@ -1,0 +1,14 @@
+#!/usr/bin/env zsh
+
+source $HOME/.profile
+cachedir="${XDG_CACHE_HOME:-"$HOME/.cache"}";
+cache="$cachedir/papers";
+
+[ ! -e "$cache" ] &&  recordPapers
+
+command -v rofi >/dev/null 2>&1 || exit
+
+choose=$(cat $cache | rofi -dmenu)
+bib=$(awk 'BEGIN {RS="#"; FS="\n"} '/$choose/' {if ($2 !="") print $1}' $cache)
+bib="$paperDir$bib.bib"
+awk 'BEGIN {RS="\n@"} '/$choose/' { print "@" $0}' $bib | xsel --clipboard
