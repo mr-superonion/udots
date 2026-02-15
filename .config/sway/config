@@ -1,0 +1,66 @@
+# Default config for sway
+#
+# Copy this to ~/.config/sway/config and edit it to your liking.
+#
+# Read `man 5 sway` for a complete reference.
+
+# styles - set the folder for your theme definition file
+set $theme /usr/share/sway/themes/matcha-green
+set $term foot
+
+# theme variables
+include $theme/theme.conf
+
+# user theme variable can override the global theme
+include $HOME/.config/sway/definitions.d/theme.conf
+
+# global variables
+include /etc/sway/definitions
+
+# user variables can override global definitions
+include $HOME/.config/sway/definitions.d/*.conf
+
+include /etc/sway/inputs/*
+
+# only enable this if every app you use is compatible with wayland
+# xwayland disable
+
+# include additional configs e.g. to autostart applications
+include /etc/sway/config.d/*
+
+# user config
+include $HOME/.config/sway/config.d/*
+
+# in your ~/.config/sway/config
+input type:keyboard {
+    repeat_delay 300
+    repeat_rate 50
+    xkb_file ~/.config/sway/xkb/caps-esc-grave.xkb
+}
+
+# Make env available to systemd user services (incl. portals)
+exec_always {
+    dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_SESSION_TYPE=wayland XDG_CURRENT_DESKTOP=sway
+    systemctl --user import-environment WAYLAND_DISPLAY XDG_SESSION_TYPE XDG_CURRENT_DESKTOP
+    systemctl --user restart xdg-desktop-portal xdg-desktop-portal-wlr
+}
+output eDP-2 pos 0 0
+output eDP-2 scale 2.5
+output DP-1 scale 1.5
+output HDMI-A-1 scale 1.5
+
+
+exec_always {
+    # Input method env for Fcitx5
+    export GTK_IM_MODULE=fcitx
+    export QT_IM_MODULE=fcitx
+    export XMODIFIERS=@im=fcitx
+    export SDL_IM_MODULE=fcitx
+    # start fcitx5
+    fcitx5 &
+    nm-applet &
+    pkill -x ssh-agent 2>/dev/null
+    ssh-agent -a "$XDG_RUNTIME_DIR/ssh-agent.socket" >/dev/null
+    systemctl --user set-environment SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
+    dbus-update-activation-environment --systemd SSH_AUTH_SOCK
+}
