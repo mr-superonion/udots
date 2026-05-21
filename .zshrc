@@ -25,3 +25,10 @@ done
 unset config_files
 
 export LMOD_SYSTEM_DEFAULT_MODULES="python:cray-libsci:craype-network-arises:cray-mpich:craype"
+
+if ! pgrep -u "$USER" ssh-agent > /dev/null; then
+    ssh-agent -s > ~/.ssh/agent.env
+fi
+[ -f ~/.ssh/agent.env ] && . ~/.ssh/agent.env > /dev/null
+
+
